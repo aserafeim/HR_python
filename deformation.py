@@ -44,10 +44,10 @@ def calc_const_A5(temperature, strain_rate_initial):
     return calc_const_A3(temperature, strain_rate_initial) * calc_const_A4(temperature)
 
 
-def dislocation_density_calc(rho_prev, time_step, temperature, strain_rate_initial, D_t):
+def dislocation_density_calc(rho_prev, time_step, temperature, strain_rate_initial, D_def):
 #    D_t = inputdata.grain_size_init * math.exp(-2*temp_strain/math.sqrt(3))
     subpart1 = (calc_const_A0(temperature, strain_rate_initial) * inputdata.fitting_params['C_1'])\
-               / (3 * D_t)
+               / (3 * D_def)
     
     subpart2 = calc_const_A0(temperature, strain_rate_initial) * inputdata.fitting_params['C_2'] * math.sqrt(rho_prev)
     

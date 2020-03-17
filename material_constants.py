@@ -9,7 +9,7 @@ def calc_unit_cell_length(temperature):
 
 
 def calc_burgers_vector(temperature):
-    '% Burgers vector in m'
+    'Burgers vector in m'
     return calc_unit_cell_length(temperature) / math.sqrt(2.0)
 
 
@@ -71,6 +71,6 @@ def calc_stress(temp_curr, temp_strain_rate, rho_m):
      a5 = deformation.calc_const_A5(temp_curr, temp_strain_rate) / math.sqrt(rho_m)
      const_sigma0 = (58.7 - 0.0425*(temp_curr - 273)) * math.pow(10, 6)
      stress_part1 = inputdata.M * inputdata.alpha * calc_shear_modulus(temp_curr) * calc_burgers_vector(temp_curr) * math.sqrt(rho_m)
-     stress_part2 = (inputdata.M * temp_curr * inputdata.K_b  * math.sqrt(rho_m) * numpy.arcsinh(a5))/ (math.pow(calc_burgers_vector(temp_curr),2) * inputdata.fitting_params['C_9'])
+     stress_part2 = (inputdata.M * temp_curr * inputdata.K_b * math.sqrt(rho_m) * numpy.arcsinh(a5))/ (math.pow(calc_burgers_vector(temp_curr),2) * inputdata.fitting_params['C_9'])
      stress = stress_part1 + stress_part2 + const_sigma0
      return stress
