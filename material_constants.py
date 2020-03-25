@@ -9,7 +9,7 @@ def calc_unit_cell_length(temperature):
 
 
 def calc_burgers_vector(temperature):
-    '% Burgers vector in m'
+    'Burgers vector in m'
     return calc_unit_cell_length(temperature) / math.sqrt(2.0)
 
 
@@ -53,9 +53,11 @@ def calc_gb_mobility(temperature):
     M_g = 1.05e-4 * numpy.exp(-160000 / (8.314 * temperature))
     return M_g
 
+
 def calc_gb_mobility2_drx(temperature):
     M_g = 355e-6 * numpy.exp(-29410 * 4.25 / (8.314 * temperature))
     return M_g
+
 
 def calc_austenite_gb_energy(temperature):
     Gam_gb = 1.3115 - 0.0005 * temperature
@@ -66,11 +68,28 @@ def calc_pinning_pressure(temperature, fraction_p, radius_p):
     pinning_press = 3 * calc_austenite_gb_energy(temperature) * fraction_p / 2 / radius_p
     return pinning_press
 
+
 def calc_stress(temp_curr, temp_strain_rate, rho_m):
      'calculation of stress'
      a5 = deformation.calc_const_A5(temp_curr, temp_strain_rate) / math.sqrt(rho_m)
      const_sigma0 = (58.7 - 0.0425*(temp_curr - 273)) * math.pow(10, 6)
      stress_part1 = inputdata.M * inputdata.alpha * calc_shear_modulus(temp_curr) * calc_burgers_vector(temp_curr) * math.sqrt(rho_m)
-     stress_part2 = (inputdata.M * temp_curr * inputdata.K_b  * math.sqrt(rho_m) * numpy.arcsinh(a5))/ (math.pow(calc_burgers_vector(temp_curr),2) * inputdata.fitting_params['C_9'])
+     stress_part2 = (inputdata.M * temp_curr * inputdata.K_b * math.sqrt(rho_m) * numpy.arcsinh(a5))/ (math.pow(calc_burgers_vector(temp_curr), 2) * inputdata.fitting_params['C_9'])
      stress = stress_part1 + stress_part2 + const_sigma0
      return stress
+
+
+def calculate_stress(temp_curr, strain_rate_initial, rho_m, c7, c8, c9, m):
+    a0 = m * strain_rate_initial / calc_burgers_vector(temp_curr)
+    a3 = a0 / (c7 * inputdata.nu_a)
+    a4 = numpy.exp(c8 * (calc_shear_modulus(temp_curr) / (2 * inputdata.K_b * temp_curr)) \
+                   * math.pow(calc_burgers_vector(temp_curr), 3))
+    a5 = a3 * a4
+    modified_a5 = a5 / math.sqrt(rho_m)
+    const_sigma0 = (58.7 - 0.0425 * (temp_curr - 273)) * math.pow(10, 6)
+    stress_part1 = m * inputdata.alpha * calc_shear_modulus(temp_curr) * calc_burgers_vector(
+        temp_curr) * math.sqrt(rho_m)
+    stress_part2 = (m * temp_curr * inputdata.K_b * math.sqrt(rho_m) * numpy.arcsinh(modified_a5)) / (
+                math.pow(calc_burgers_vector(temp_curr), 2) * c9)
+    stress = stress_part1 + stress_part2 + const_sigma0
+    return stress

@@ -11,53 +11,24 @@ def strain_calc(strain_init, time_step, strain_rate):
     return strain_current
 
 
-def calc_const_A0(temperature, strain_rate_initial):
-    return inputdata.M * strain_rate_initial / \
-           material_constants.calc_burgers_vector(temperature)
-
-
-def calc_const_A2 (temperature):
-    return inputdata.fitting_params['C_4'] * inputdata.fitting_params['C_5'] * \
-           material_constants.calc_burgers_vector(temperature) * inputdata.M / inputdata.fitting_params['C_9']
-
-
-def calc_const_A1(temperature):
-    part1 = inputdata.M * inputdata.alpha * material_constants.calc_shear_modulus(temperature)\
-            / (inputdata.K_b * temperature)
-    part2 = math.pow(material_constants.calc_burgers_vector(temperature), 4)
-    return inputdata.fitting_params['C_4'] * inputdata.fitting_params['C_5'] * part1 * part2
-
-
-def calc_const_A4(temperature):
-    step1 = (material_constants.calc_shear_modulus(temperature) / (2 * inputdata.K_b * temperature)) \
-            * math.pow(material_constants.calc_burgers_vector(temperature), 3)
-    
-    step2 = inputdata.fitting_params['C_8'] * step1
-    return numpy.exp(step2)
-
-
-def calc_const_A3(temperature, strain_rate_initial):
-    return calc_const_A0(temperature, strain_rate_initial)/(inputdata.fitting_params['C_7'] * inputdata.nu_a)
-
-
-def calc_const_A5(temperature, strain_rate_initial):
-    return calc_const_A3(temperature, strain_rate_initial) * calc_const_A4(temperature)
-
-
-def dislocation_density_calc(rho_prev, time_step, temperature, strain_rate_initial, D_t):
-#    D_t = inputdata.grain_size_init * math.exp(-2*temp_strain/math.sqrt(3))
-    subpart1 = (calc_const_A0(temperature, strain_rate_initial) * inputdata.fitting_params['C_1'])\
-               / (3 * D_t)
-    
-    subpart2 = calc_const_A0(temperature, strain_rate_initial) * inputdata.fitting_params['C_2'] * math.sqrt(rho_prev)
-    
-    subpart3 = -3 * inputdata.fitting_params['C_3'] * calc_const_A0(temperature, strain_rate_initial) * \
-                    material_constants.calc_burgers_vector(temperature) * rho_prev
-   
-    subpart4 = -5 * calc_const_A1(temperature) * material_constants.calc_effective_diffusivity(temperature, rho_prev)\
-               * math.pow(rho_prev, 2.5)
-    
-    subpart5 = (subpart4 / (5 * calc_const_A1(temperature))) * calc_const_A2(temperature) * math.asinh(calc_const_A5(temperature, strain_rate_initial) / math.pow(rho_prev, 0.5))
-    
+def calc_deformation_dislocation(rho_prev, time_step, temperature,
+                                 strain_rate_initial, D_def, c1, c2, c3,
+                                 c4, c5, c6, c7, c8, c9, c10, m):
+    ''' calculation of all the A values using the constants c1, c2, c3, c4 ... to be further used for'
+        'the dislocation density calculation after deformation '''
+    a0 = m * strain_rate_initial / material_constants.calc_burgers_vector(temperature)
+    a1 = c4 * c5 * m * inputdata.alpha * material_constants.calc_shear_modulus(temperature) \
+         / (inputdata.K_b * temperature) * math.pow(material_constants.calc_burgers_vector(temperature), 4)
+    a2 = c4 * c5 * material_constants.calc_burgers_vector(temperature) * m / c9
+    a3 = a0 / (c7 * inputdata.nu_a)
+    a4 = numpy.exp(c8 * (
+                material_constants.calc_shear_modulus(temperature) / (2 * inputdata.K_b * temperature)) \
+                   * math.pow(material_constants.calc_burgers_vector(temperature), 3))
+    a5 = a3 * a4
+    subpart1 = a0 * c1 / (3 * D_def)
+    subpart2 = a0 * c2 * math.sqrt(rho_prev)
+    subpart3 = -3 * c3 * a0 * material_constants.calc_burgers_vector(temperature) * rho_prev
+    subpart4 = -5 * a1 * material_constants.calc_effective_diffusivity(temperature, rho_prev) * math.pow(rho_prev, 2.5)
+    subpart5 = (subpart4 / (5 * a1)) * a2 * math.asinh(a5 / math.sqrt(rho_prev))
     rho_current = (subpart1 + subpart2 + subpart3 + subpart4 + subpart5) * time_step + rho_prev
     return rho_current
