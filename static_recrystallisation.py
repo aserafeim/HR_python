@@ -21,7 +21,7 @@ def calc_radius_growth(rho_prev, temperature, time_step):
 
 
 def static_rx(rho_m, rho_def, n_rx_prev, r_g_prev, D_def, temperature, time_step, r_rx_prev):
-
+    # D_def = d_mean_prev * math.exp(-2 * 0 / math.sqrt(3))
     rx_critical = mat_const.calc_austenite_gb_energy(temperature) / (calc_driving_force(rho_m, temperature) + 1)
     '''check for nucleation possible or not'''
     if rx_critical > r_rx_prev:
@@ -39,7 +39,7 @@ def static_rx(rho_m, rho_def, n_rx_prev, r_g_prev, D_def, temperature, time_step
     n_rx = n_rx_prev + d_nrx
     r_rx = (r_g_prev * n_rx_prev + d_nrx * calc_critical_radius_rx_grain(rho_m, temperature)) / n_rx #\
     r_g_curr = r_rx + calc_radius_growth(rho_m, temperature, time_step)
-    x_curr = (4 / 3) * math.pi * math.pow(r_g_curr, 3) * n_rx
+    x_curr = (4/3) * math.pi * math.pow(r_g_curr, 3) * n_rx
 
     return_dict = {'driving_force': calc_driving_force(rho_m, temperature),
                    'r_critical': rx_critical,
