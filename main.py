@@ -309,8 +309,8 @@ for i in range(1, max_row - 1):
             storage_dict['rho_m'].append(main_dict[i]['rho_m'][-1])
             # storage_dict['D_def'].append(0.0)
             'added to make all lists of same length'
-            storage_dict['d_nrx_dt'].append(0.0)
-            storage_dict['d_nrx'].append(0.0)
+            # storage_dict['d_nrx_dt'].append(0.0)
+            # storage_dict['d_nrx'].append(0.0)
 
     print("start time of pass: ", main_dict[i]['time'][0], " and end time pass: ", main_dict[i]['time'][-1])
     print("global time start: ", main_dict[i]['global_time'][0], " and end of global time: ", main_dict[i]['global_time'][-1])
