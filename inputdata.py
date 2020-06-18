@@ -1,11 +1,11 @@
-input_data = {'dt': 0.0001, 'strain_initial': 0,
-              'strain_final': 0.437096511,
-              'strain_rate_initial': 0.402892242,
-            'strain_rate_final': 0.402892242,
-            'temp_initial': 1073,  'temp_final': 1073,
-              'dislocation_density_initial': 1E+11,
-              'pass_interval': 1.084896817,
-              'pass_number': 1}
+# input_data = {'dt': 0.0001, 'strain_initial': 0,
+#               'strain_final': 0.437096511,
+#               'strain_rate_initial': 0.402892242,
+#             'strain_rate_final': 0.402892242,
+#             'temp_initial': 1073,  'temp_final': 1073,
+#               'dislocation_density_initial': 1E+11,
+#               'pass_interval': 1.084896817,
+#               'pass_number': 1}
 fitting_params = {'C_1': 0.8, 'C_2': 0.009, 'C_3': 1, 'C_4': 10, 'C_5': 1.4, 'C_6': 0.0001, 'C_7': 0.00008, 'C_8': 0.9,
                   'C_9': 1, 'C_10': 1.026E+01}
 

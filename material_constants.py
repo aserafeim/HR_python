@@ -1,7 +1,6 @@
 import inputdata as inputdata
 import math
 import numpy
-import deformation
 from inputdata import fitting_params as fp
 
 
@@ -30,17 +29,18 @@ def calc_melting_temp_for_diffusion(temperature):
 
 
 def calc_self_diffusivity(temperature):
-    d_self = 6.89e-6 * numpy.exp(- 17.0 * calc_melting_temp_for_diffusion(temperature) / temperature)
+    d_self = 6.89e-6 * math.exp(- 17.0 * calc_melting_temp_for_diffusion(temperature) / temperature)
     return d_self
 
 
 def calc_gb_diffusivity(temperature):
-    d_gb = 1.0e-3 * numpy.exp(- 11.0 * calc_melting_temp_for_diffusion(temperature) / temperature)
+    d_gb = 1.0e-3 * math.exp(- 11.0 * calc_melting_temp_for_diffusion(temperature) / temperature)
+    # d_gb = inputdata.fitting_params['C_2'] * math.exp(- 11.0 * calc_melting_temp_for_diffusion(temperature) / temperature)
     return d_gb
 
 
 def calc_vol_dislocation(temperature, rho_last):
-    vol_d = 3.1416 * calc_burgers_vector(temperature) ** 2 * rho_last
+    vol_d = math.pi * math.pow(calc_burgers_vector(temperature), 2) * rho_last
     return vol_d
 
 
@@ -51,12 +51,12 @@ def calc_effective_diffusivity(temperature, rho_last):
 
 
 def calc_gb_mobility(temperature):
-    M_g = 1.05e-4 * numpy.exp(-160000 / (8.314 * temperature))
+    M_g = 1.05e-4 * math.exp(-160000 / (8.314 * temperature))
     return M_g
 
 
 def calc_gb_mobility2_drx(temperature):
-    M_g = 355e-6 * numpy.exp(-29410 * 4.25 / (8.314 * temperature))
+    M_g = 355e-6 * math.exp(-29410 * 4.25 / (8.314 * temperature))
     return M_g
 
 
@@ -80,8 +80,9 @@ def calc_pinning_pressure(temperature, fraction_p, radius_p):
 #      return stress
 
 
-def calculate_stress(temp_curr, strain_rate_initial, rho_m):
-    a0 = inputdata.M * strain_rate_initial / calc_burgers_vector(temp_curr)
+def calculate_stress(temp_curr, strain_rate_curr, rho_m):
+
+    a0 = inputdata.M * strain_rate_curr / calc_burgers_vector(temp_curr)
     a3 = a0 / (fp['C_7'] * inputdata.nu_a)
     a4 = numpy.exp(fp['C_8'] * (calc_shear_modulus(temp_curr) / (2 * inputdata.K_b * temp_curr)) \
                    * math.pow(calc_burgers_vector(temp_curr), 3))

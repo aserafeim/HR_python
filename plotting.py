@@ -6,7 +6,6 @@ Created on Thu Jan 23 13:38:31 2020
 """
 import matplotlib.pyplot as plt
 import openpyxl
-import math
 import os
 
 
