@@ -21,7 +21,7 @@ M = 3
 alpha = 0.1
 C0 = 750
 activation_energy_static_rx = 92100
-uni_gas_const = 8.314
+R = 8.314
 '''% Stefan Boltzmann constant in W/(m^2.K^4)'''
 K_b = 1.38E-23
 '''% Attack frequency in 1/s'''

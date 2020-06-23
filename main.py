@@ -6,15 +6,16 @@ import inputdata
 import material_constants as mat_const
 import math
 import time
-from exporter import export_to_excel, export_pass
+from exporter import export_to_excel, export_pass, export_by_pass
 from plotting import plotting_step
 from plotting2 import plot_pass
 import numpy
+import os
 
-
+start = time.time()
 location = r'D:\HotRolling-env\Check_HR\Test_srx.xlsx'
 wb = openpyxl.load_workbook(location)
-sheet_curr = wb['Sheet4']
+sheet_curr = wb['Static_RX']
 max_col = sheet_curr.max_column
 max_row = sheet_curr.max_row
 main_dict = {}
@@ -39,15 +40,9 @@ for i in range(3, max_row + 1):
     else:
         temp_dict['reference'] = 'interpass'
     main_dict[i - 2] = temp_dict
-for key, items in main_dict.items():
-    print(key, ':', items, '\n')
-
-print('"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""')
 
 'start of processing of each pass'
 counter = 0
-start = time.time()
-
 'storage dictionary for storing values of the working dictionary which will be ' \
 'updated at the end to the variable pass dictionary'
 
@@ -77,7 +72,9 @@ storage_dict = {'strain': [],
 }
 '''running of loops for passes'''
 n_d = 0.0
+
 for i in range(1, max_row - 1):
+
     ''' initialisation of variables '''
     variable_pass = main_dict[i]
 
@@ -100,7 +97,7 @@ for i in range(1, max_row - 1):
         storage_dict['D_def'].append(inputdata.d0)
         'added to make the array of the same length'
         storage_dict['time'].append(0.0)
-        storage_dict['rho_m'].append(inputdata.rho_const)
+        storage_dict['rho_m'].append(1.02e11)
         storage_dict['stress'].append(0.0)
         storage_dict['rho_critical'].append(1e11)
 
@@ -114,26 +111,19 @@ for i in range(1, max_row - 1):
     if strain_rate_initial > 0:
         'sub-routine counter variable'
         j = 0
+        d_m_const = storage_dict['d_mean'][0]
         print(storage_dict)
         while time_curr <= pass_interval:
-            strain_step = strain_calc(storage_dict['strain'][j], time_step, strain_rate_initial)
-            storage_dict['strain'].append(strain_step)
+            strain_jplus1 = strain_calc(storage_dict['strain'][j], time_step, strain_rate_initial)
+            storage_dict['strain'].append(strain_jplus1)
             storage_dict['temperature'].append(storage_dict['temperature'][j] +
                                                variable_pass['temp_rate_of_change'] * time_step)
 
-            '''check if dmean of something else'''
-            D_def = storage_dict['d_mean'][j] * math.exp(-2 * 0 / math.sqrt(3))
-
             'Call to the deformation module'
-            # deformation_dict = calc_deformation_dislocation(storage_dict['rho_def'][j], time_step,
-            #                                                 storage_dict['temperature'][j],
-            #                                                 strain_rate_initial,
-            #                                                 D_def, storage_dict['n_rx'][j], storage_dict['r_g_curr'][j],
-            #                                                 storage_dict['x_curr'][j], storage_dict['x_c_curr'][j],
-            #                                                 storage_dict['r_rx'][j], storage_dict['d_mean'][j])
             deformation_dict = deformation_and_drx(storage_dict['temperature'][j],
-                                                strain_rate_initial, time_step, D_def, storage_dict['rho_def'][j], storage_dict['x_curr'][j],  storage_dict['r_g_curr'][j],
-                                                storage_dict['n_rx'][j], storage_dict['x_c_curr'][j])
+                                                   strain_rate_initial, time_step, storage_dict['rho_def'][j], storage_dict['x_curr'][j],
+                                                   storage_dict['r_g_curr'][j],
+                                                   storage_dict['n_rx'][j], storage_dict['x_c_curr'][j], (strain_jplus1-strain_initial), d_m_const)
 
             'Adding values to the lists of temp, strain and dislocation_density'
             storage_dict['time'].append(time_curr)
@@ -161,9 +151,10 @@ for i in range(1, max_row - 1):
                 #               variable_pass)
                 print("rx fraction greater than 1 ", deformation_dict)
                 break
-            if deformation_dict['rho_m'] <= 0:
+            if deformation_dict['rho_def'] <= 0:
                 print(j)
                 print(deformation_dict)
+                export_pass(storage_dict, '1st_pass_err')
             'calculation of stress'
             storage_dict['stress'].append(mat_const.calculate_stress(storage_dict['temperature'][j], strain_rate_temp, deformation_dict['rho_m']))
             'Updating variables for next iteration of the sub-routine'
@@ -173,30 +164,28 @@ for i in range(1, max_row - 1):
         j = 0
         'Static recrystallisation module'
         print(storage_dict)
+        d_m_const = storage_dict['d_mean'][0]
         while time_curr <= pass_interval:
+
             'calculation of strain and temperature'
-            strain_step = strain_calc(storage_dict['strain'][j], time_step, strain_rate_initial)
-            storage_dict['strain'].append(strain_step)
+            strain_jplus1 = strain_calc(storage_dict['strain'][j], time_step, strain_rate_initial)
+            storage_dict['strain'].append(strain_jplus1)
             storage_dict['temperature'].append(storage_dict['temperature'][j] +
-                                               variable_pass['temp_rate_of_change'] * time_step)
-            '''Calculation of D_def with strain = 0, because the effect of changing grain size cannot be taken into account'''
-            D_def = storage_dict['d_mean'][j] * math.exp(-2 * 0 / math.sqrt(3))
+                                                   variable_pass['temp_rate_of_change'] * time_step)
+
             'call to static module'
             temp_srx_dict = static_recrystallisation.static_rx(storage_dict['rho_m'][j], storage_dict['rho_def'][j],
-                                                               storage_dict['n_rx'][j], storage_dict['r_g_curr'][j],
-                                                               D_def, storage_dict['temperature'][j], time_step,
-                                                               storage_dict['r_rx'][j])
+                                                                storage_dict['n_rx'][j], storage_dict['r_g_curr'][j],
+                                                                storage_dict['d_mean'][j], storage_dict['temperature'][j], time_step,
+                                                                storage_dict['r_rx'][j], d_m_const, storage_dict['x_curr'][j], storage_dict['D_def'][j], strain_jplus1)
 
             if temp_srx_dict['rho_m'] <= 0:
-                print(j, "temp_srx_dict: ")
-                for key, val in temp_srx_dict.items():
-                    print(key, ": ", "{:e}".format(val))
-
-                # export_pass(storage_dict, '6th_pass_incomplete')
+                print(j)
+                print(temp_srx_dict)
+                # export_pass(temp_srx_dict, '1st_pass_err')
             'Stress calculation'
             storage_dict['stress'].append(mat_const.calculate_stress(storage_dict['temperature'][j], strain_rate_temp,
-                                                                     temp_srx_dict['rho_m']))
-
+                                                                         temp_srx_dict['rho_m']))
             'adding values to the list, later used for plotting the graphs'
             storage_dict['time'].append(time_curr)
             storage_dict['d_mean'].append(temp_srx_dict['d_mean'])
@@ -213,22 +202,26 @@ for i in range(1, max_row - 1):
             storage_dict['rho_def'].append(temp_srx_dict['rho_def'])
             storage_dict['D_def'].append(temp_srx_dict['D_def'])
             storage_dict['drg_dt'].append(temp_srx_dict['drg_dt'])
-            'making values equal to the last one which doesnt belong in static module'
-            # storage_dict['n_d'].append(storage_dict['n_d'][j])
 
             'updating values after every iteration'
             time_curr += time_step
             j += 1
+
+
         storage_dict['n_d'] = [n_d] * len(storage_dict['time'])
 
     'keys and values of storage dict for each iteration is added to the variable pass, which contains the '
     for key in storage_dict:
         variable_pass[key] = storage_dict[key].copy()
 
+    # if i==3:
+    #     export_pass(storage_dict, '3rd_pass_Def')
     for key, val in storage_dict.items():
         if type(val) == list and len(val) > 0:
             val_sc = "{:e}".format(val[-1])
             print(key, ": ", val_sc)
+
+    # workbook = export_by_pass(storage_dict, workbook, i)
 
     for value in storage_dict.values():
         del value[:]
@@ -240,7 +233,8 @@ for i in range(1, max_row - 1):
         if key == 'stress' or key == 'global_time' or key == 'strain':
             print(key, " : ", len(variable_pass[key]))
 
-    # export_pass(variable_pass, str(i)+"th_pass")
+    # if i == 3:
+    #     export_pass(variable_pass, "2nd_pass_interpass")
 
     if i < max_row - 2:
         storage_dict['d_mean'].append(variable_pass['d_mean'][-1])
@@ -254,7 +248,6 @@ for i in range(1, max_row - 1):
             storage_dict['r_rx'].append(0.5 * variable_pass['d_mean'][-1])
             storage_dict['n_rx'].append(variable_pass['n_rx'][-1])
             storage_dict['D_def'].append(variable_pass['D_def'][-1])
-            # storage_dict['r_critical'].append(0.0)
             storage_dict['x_curr'].append(0.0)
             storage_dict['r_g_curr'].append(variable_pass['r_g_curr'][-1])
             n_d = variable_pass['n_d'][-1]
@@ -266,7 +259,6 @@ for i in range(1, max_row - 1):
             storage_dict['r_rx'].append(0.5 * main_dict[i]['d_mean'][-1])
             storage_dict['n_rx'].append(main_dict[i]['n_rx'][-1])
             storage_dict['D_def'].append(main_dict[i]['D_def'][-1])
-            # storage_dict['r_critical'].append(0.0)
             storage_dict['r_g_curr'].append(main_dict[i]['r_g_curr'][-1])
             storage_dict['n_d'].append((variable_pass['n_d'][-1]))
             'added to make the lengths of the lists equal i.e x_curr:global_time or time = 1:1'
@@ -280,34 +272,30 @@ for i in range(1, max_row - 1):
             storage_dict['r_g_curr'].append(0.0)
             storage_dict['x_curr'].append(0.0)
             storage_dict['x_c_curr'].append(0.0)
-            storage_dict['rho_def'].append(main_dict[i]['rho_def'][-1])
+            storage_dict['rho_def'].append(main_dict[i]['rho_m'][-1])
             storage_dict['rho_m'].append(main_dict[i]['rho_m'][-1])
             storage_dict['D_def'].append(0.0)
-            # storage_dict['r_critical'].append(0.0)
             n_d = variable_pass['n_d'][-1]
-            'added to make all lists of same length'
-            # storage_dict['d_nrx_dt'].append(0.0)
-            # storage_dict['d_nrx'].append(0.0)
 
-    # print("start time of pass: ", main_dict[i]['time'][0], " and end time pass: ", main_dict[i]['time'][-1])
-    # print("global time start: ", main_dict[i]['global_time'][0], " and end of global time: ", main_dict[i]['global_time'][-1])
 
 'converting each and every list to a numpy array'
-for value in main_dict.values():
-    for key, dict_value in value.items():
-        if type(dict_value) == list:
-            arr = numpy.array(dict_value)
-            value[key] = arr
-            del dict_value
+# for value in main_dict.values():
+#     for key, dict_value in value.items():
+#         if type(dict_value) == list:
+#             arr = numpy.array(dict_value)
+#             value[key] = arr
+#             del dict_value
+'plotting'
+plot_parameters = ['x_curr', 'd_mean', 'rho_m', 'n_rx', 'stress', 'r_g_curr']
+plotting_step(plot_parameters, main_dict)
 
-'plotting and exporting values to an excel file'
-# x_values = 'strain'
-# y_values = 'd_mean'
-# plot_pass(x_values, y_values, x_values, y_values, False, False, main_dict)
-# plot_step_wise(y_values, 'Stress[MPa]', False, main_dict)
-# plot_parameters = ['x_curr', 'd_mean', 'rho_m', 'n_rx', 'stress']
-# plotting_step(plot_parameters, main_dict)
-name_of_file = '5thAnd6thPass'
+'exporting values to an excel file'
+# workbook.close()
+# filename = '/Completed_Schedule.xlsx'
+# filepath = os.getcwd() + filename
+# workbook.save(filepath)
+
+# name_of_file = 'Complete_Schedule'
 # export_to_excel(main_dict, name_of_file)
 
 end = time.time()

@@ -73,19 +73,20 @@ def plot_step_wise(y_values, y_axis_name, log_y, reference_dict):
 
 
 def plotting_step(y_values, reference_dict):
-    list_x = []
+    list_x = list()
     plotter_helper_y = []
     for keys in reference_dict.keys():
         list_x.append(keys)
     for y_value in y_values:
-        list_y = []
+        list_y = list()
+        # list_y.append(reference_dict[1][y_value][0])
         for value in reference_dict.values():
             list_y.append(value[y_value][-1])
         plotter_helper_y.append((list_y, y_value))
 
     for i in range(len(plotter_helper_y)):
         plt.figure(i+1)
-        plt.plot(list_x, plotter_helper_y[i][0])
+        plt.plot(list_x, plotter_helper_y[i][0], 'r')
         plt.grid(True, which="both", linestyle='--')
         plt.xlabel("Step")
         plt.ylabel(plotter_helper_y[i][1])

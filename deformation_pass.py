@@ -10,13 +10,16 @@ def strain_calc(strain_init, time_step, strain_rate):
     return strain_current
 
 
-def deformation_and_drx(temperature, strain_rate_curr, dt, D_def, rho_prev, x_prev, r_g_prev, n_rx_prev, x_c_prev):
+def deformation_and_drx(temperature, strain_rate_curr, dt, rho_prev, x_prev, r_g_prev, n_rx_prev, x_c_prev, strain, d_m_const):
     b = mat_const.calc_burgers_vector(temperature)
     G = mat_const.calc_shear_modulus(temperature)
     D_eff = mat_const.calc_effective_diffusivity(temperature, rho_prev)
     Gam_gb = mat_const.calc_austenite_gb_energy(temperature)
     tau = mat_const.calc_dislocation_line_energy(temperature)
     M_g = mat_const.calc_gb_mobility2_drx(temperature)
+    '''use local pass strain i.e. strain at point x - initial strain of the pass i.e. 
+    if strain ranges from 0.3 - 0.5, local pass strain at point 1 would be 0.3002 - 0.3, and this is used in D_def'''
+    D_def = d_m_const * math.exp(-2 * strain / math.sqrt(3))
     a0 = inputdata.M * strain_rate_curr / b
     a1 = fp['C_4'] * fp['C_5'] * math.pow(b, 4) * inputdata.M * inputdata.alpha * G / (inputdata.K_b * temperature)
     a2 = fp['C_4'] * fp['C_5'] * b * inputdata.M / fp['C_9']
@@ -32,22 +35,21 @@ def deformation_and_drx(temperature, strain_rate_curr, dt, D_def, rho_prev, x_pr
 
     drho_dt = drho_dt0 + drho_dt1 - drho_dt3 - drho_dt4 - drho_dt5 * drho_dt6
     rho_curr = rho_prev + drho_dt * dt
-
     l_d = 1 / ((fp['C_1'] / D_def) + fp['C_2'] * math.sqrt(rho_curr))
+
     'critical rho calculation'
     if strain_rate_curr >= 1:
         n_z = 0.1
     else:
         n_z = 1
-
     'rho critical'
-    rho_c = math.pow((16 * Gam_gb * inputdata.M * math.pow(strain_rate_curr, n_z) / (3 * b * M_g * math.pow(tau, 2)))*((fp['C_1'] / D_def) + fp['C_2'] * math.sqrt(inputdata.rho_const)), (1/3))
+    rho_c = math.pow(((16 * Gam_gb * inputdata.M * math.pow(strain_rate_curr, n_z) / (3 * b * M_g * math.pow(tau, 2)))*((fp['C_1'] / D_def) + fp['C_2'] * math.sqrt(inputdata.rho_const))), (1/3))
     l_d_cr = 1 / ((fp['C_1'] / D_def) + fp['C_2'] * math.sqrt(rho_c))
 
     if rho_curr > rho_c and round(strain_rate_curr, 7) != 0.0:
         r_xc = (3 * b * M_g * tau / (4 * inputdata.M * fp['C_10'])) * (math.pow(rho_c, 2) /(fp['C_1'] / D_def + fp['C_2'] * math.sqrt(rho_c)))
         n_d = math.pi * math.pow(r_xc, 2) / math.pow(l_d_cr, 2)
-        p_r = math.exp(-281000 / (inputdata.uni_gas_const * temperature))
+        p_r = math.exp(-281000 / (inputdata.R * temperature))
         kf = 0.4e6
         dn_rx_dt = kf * strain_rate_curr * p_r * (1 - x_prev)/(n_d * D_def * b * l_d)
     else:
@@ -65,6 +67,7 @@ def deformation_and_drx(temperature, strain_rate_curr, dt, D_def, rho_prev, x_pr
         r_rx = 0.0
 
     x_curr = (4/3) * math.pi * n_rx_curr * math.pow(r_rx, 3)
+    # print("rho_def : ", "{:e}".format(rho_curr), " and x curr : ", x_curr, "D_Def : ", D_def)
     x_c_curr = x_c_prev
     if round(x_c_curr, 7) == 0.0:
         x_c_curr = x_curr
@@ -86,8 +89,7 @@ def deformation_and_drx(temperature, strain_rate_curr, dt, D_def, rho_prev, x_pr
                     b * math.pow(M_g, 0.98) * tau * rho_curr) * fragment1 * r_rx
 
     rho_m = rho_curr * (1 - x_curr) + rho_rx * x_curr
-
-    d_mean = x_curr * 2 * r_g_curr + (1-x_curr) * D_def
+    d_mean = x_curr * 2 * r_g_curr + (1-x_curr) * d_m_const
 
     deformation_dict = {'D_def': D_def,
                         'rho_critical': rho_c,
@@ -106,5 +108,4 @@ def deformation_and_drx(temperature, strain_rate_curr, dt, D_def, rho_prev, x_pr
                         'd_nrx': d_nrx,
                         'x_c_curr': x_c_curr
                         }
-
     return deformation_dict
